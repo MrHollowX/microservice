@@ -3,6 +3,8 @@ package org.example.microservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.microservice.dto.UserDto;
 import org.example.microservice.event.UserCreatedEvent;
+import org.example.microservice.event.UserDeletedEvent;
+import org.example.microservice.event.UserUpdatedEvent;
 import org.example.microservice.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -176,6 +178,15 @@ public class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.email", is("updated@org.example")));
 
         assertTrue(userRepository.findByEmail("updated@org.example").isPresent());
+
+        ArgumentCaptor<UserUpdatedEvent> eventCaptor = ArgumentCaptor.forClass(UserUpdatedEvent.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq("user.exchange"),
+                eq("user.updated.key"),
+                eventCaptor.capture()
+        );
+        assertEquals("updated_username", eventCaptor.getValue().username());
+        assertEquals("updated@org.example", eventCaptor.getValue().email());
     }
 
     @Test
@@ -211,6 +222,15 @@ public class UserControllerIntegrationTest {
                 .andExpect(status().isNoContent());
 
         assertEquals(0, userRepository.count());
+
+        ArgumentCaptor<UserDeletedEvent> eventCaptor = ArgumentCaptor.forClass(UserDeletedEvent.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq("user.exchange"),
+                eq("user.deleted.key"),
+                eventCaptor.capture()
+        );
+        assertEquals("to_be_deleted", eventCaptor.getValue().username());
+        assertEquals("delete-me@org.example", eventCaptor.getValue().email());
     }
 
     @Test

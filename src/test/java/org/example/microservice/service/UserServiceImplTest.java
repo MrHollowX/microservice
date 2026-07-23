@@ -2,6 +2,8 @@ package org.example.microservice.service;
 
 import org.example.microservice.dto.UserDto;
 import org.example.microservice.event.UserCreatedEvent;
+import org.example.microservice.event.UserDeletedEvent;
+import org.example.microservice.event.UserUpdatedEvent;
 import org.example.microservice.exception.DuplicateUserException;
 import org.example.microservice.exception.UserNotFoundException;
 import org.example.microservice.model.User;
@@ -153,6 +155,16 @@ class UserServiceImplTest {
         assertEquals(1L, result.id());
         assertEquals("updated_username", result.username());
         assertEquals("updated@example.com", result.email());
+
+        ArgumentCaptor<UserUpdatedEvent> eventCaptor = ArgumentCaptor.forClass(UserUpdatedEvent.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq("user.exchange"),
+                eq("user.updated.key"),
+                eventCaptor.capture()
+        );
+        assertEquals(1L, eventCaptor.getValue().userId());
+        assertEquals("updated_username", eventCaptor.getValue().username());
+        assertEquals("updated@example.com", eventCaptor.getValue().email());
     }
 
     @Test
@@ -178,6 +190,7 @@ class UserServiceImplTest {
         assertThrows(UserNotFoundException.class, () -> userService.updateUser(99L, updateDto));
 
         verify(userRepository, never()).save(any(User.class));
+        verifyNoInteractions(rabbitTemplate);
     }
 
     @Test
@@ -190,23 +203,35 @@ class UserServiceImplTest {
         assertThrows(DuplicateUserException.class, () -> userService.updateUser(1L, updateDto));
 
         verify(userRepository, never()).save(any(User.class));
+        verifyNoInteractions(rabbitTemplate);
     }
 
     @Test
-    void deleteUser_ShouldDelete_WhenUserExists() {
-        when(userRepository.existsById(1L)).thenReturn(true);
+    void deleteUser_ShouldDeleteAndPublishEvent_WhenUserExists() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
 
         userService.deleteUser(1L);
 
         verify(userRepository).deleteById(1L);
+
+        ArgumentCaptor<UserDeletedEvent> eventCaptor = ArgumentCaptor.forClass(UserDeletedEvent.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq("user.exchange"),
+                eq("user.deleted.key"),
+                eventCaptor.capture()
+        );
+        assertEquals(1L, eventCaptor.getValue().userId());
+        assertEquals("existing_user", eventCaptor.getValue().username());
+        assertEquals("existing@example.com", eventCaptor.getValue().email());
     }
 
     @Test
     void deleteUser_ShouldThrowUserNotFoundException_WhenUserDoesNotExist() {
-        when(userRepository.existsById(99L)).thenReturn(false);
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
 
         verify(userRepository, never()).deleteById(any());
+        verifyNoInteractions(rabbitTemplate);
     }
 }

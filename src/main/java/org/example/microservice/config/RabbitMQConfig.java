@@ -16,10 +16,26 @@ public class RabbitMQConfig {
     public static final String EXCHANGE_NAME = "user.exchange";
     public static final String ROUTING_KEY = "user.created.key";
 
+    public static final String UPDATE_QUEUE_NAME = "user.update.queue";
+    public static final String UPDATE_ROUTING_KEY = "user.updated.key";
+
+    public static final String DELETE_QUEUE_NAME = "user.deletion.queue";
+    public static final String DELETE_ROUTING_KEY = "user.deleted.key";
+
     @Bean
     public Queue queue() {
         // Creates a durable queue (survives server restarts)
         return new Queue(QUEUE_NAME, true);
+    }
+
+    @Bean
+    public Queue updateQueue() {
+        return new Queue(UPDATE_QUEUE_NAME, true);
+    }
+
+    @Bean
+    public Queue deleteQueue() {
+        return new Queue(DELETE_QUEUE_NAME, true);
     }
 
     @Bean
@@ -31,6 +47,16 @@ public class RabbitMQConfig {
     public Binding binding(Queue queue, TopicExchange exchange) {
         // Binds the queue to the exchange using our specific routing key
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding updateBinding(Queue updateQueue, TopicExchange exchange) {
+        return BindingBuilder.bind(updateQueue).to(exchange).with(UPDATE_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding deleteBinding(Queue deleteQueue, TopicExchange exchange) {
+        return BindingBuilder.bind(deleteQueue).to(exchange).with(DELETE_ROUTING_KEY);
     }
 
     // Serializes published objects to JSON and deserializes incoming messages back into

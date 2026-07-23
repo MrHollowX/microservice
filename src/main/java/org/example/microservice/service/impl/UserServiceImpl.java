@@ -3,6 +3,8 @@ package org.example.microservice.service.impl;
 import org.example.microservice.config.RabbitMQConfig;
 import org.example.microservice.dto.UserDto;
 import org.example.microservice.event.UserCreatedEvent;
+import org.example.microservice.event.UserDeletedEvent;
+import org.example.microservice.event.UserUpdatedEvent;
 import org.example.microservice.exception.DuplicateUserException;
 import org.example.microservice.exception.UserNotFoundException;
 import org.example.microservice.model.User;
@@ -87,14 +89,30 @@ public class UserServiceImpl implements UserService {
 
         User updatedUser = userRepository.save(user);
 
+        UserUpdatedEvent event = new UserUpdatedEvent(
+                updatedUser.getId(),
+                updatedUser.getUsername(),
+                updatedUser.getEmail(),
+                LocalDateTime.now()
+        );
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.UPDATE_ROUTING_KEY, event);
+
         return new UserDto(updatedUser.getId(), updatedUser.getUsername(), updatedUser.getEmail());
     }
 
     @Override
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException("User not found with id: " + id);
-        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+
         userRepository.deleteById(id);
+
+        UserDeletedEvent event = new UserDeletedEvent(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                LocalDateTime.now()
+        );
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.DELETE_ROUTING_KEY, event);
     }
 }
