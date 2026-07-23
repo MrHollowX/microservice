@@ -1,5 +1,7 @@
 # Microservice
 
+[![Tests](https://github.com/MrHollowX/microservice/actions/workflows/tests.yml/badge.svg)](https://github.com/MrHollowX/microservice/actions/workflows/tests.yml)
+
 A Spring Boot 3.2.4 (Java 23) user management microservice: CRUD REST API backed by JPA/H2, with input validation, centralized error handling, a RabbitMQ event published on user creation, pagination, Flyway-managed schema migrations, and OpenAPI docs.
 
 ## Prerequisites
