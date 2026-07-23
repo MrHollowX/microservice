@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/proddb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  h2:
+    console:
+      enabled: false
+
+  jpa:
+    hibernate:
+      # Flyway (see db/migration) owns schema changes in every environment now.
+      # Hibernate only verifies the entities match what Flyway created; "validate"
+      # fails fast instead of silently altering or masking a schema drift.
+      ddl-auto: validate
+    show-sql: false
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+logging:
+  level:
+    root: INFO
+    org.example.microservice: INFO
